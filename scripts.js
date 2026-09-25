@@ -232,6 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // populate stats on load
   updateDonationStats();
   // load dynamic content
+  fetchGallery();
   fetchProjects();
   fetchEvents();
   // Use separate buttons for Visa / M-Pesa; remove form submit handler
@@ -239,6 +240,38 @@ document.addEventListener('DOMContentLoaded', () => {
   const mpesaButton = document.querySelector('.mpesa-submit');
   if (visaButton) visaButton.addEventListener('click', processVisaPayment);
   if (mpesaButton) mpesaButton.addEventListener('click', processMpesaPayment);
+
+  async function fetchGallery() {
+    try {
+      const resp = await fetch('/api/gallery');
+      const data = await resp.json();
+      const container = document.getElementById('galleryGrid');
+      if (!container) return;
+      const items = Array.isArray(data.gallery) && data.gallery.length ? data.gallery : [
+        { title: 'Books for brighter futures', label: 'Education', image: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=900&q=80', variant: 'visual-one' },
+        { title: 'Clean water access', label: 'Water', image: 'https://images.unsplash.com/photo-1522493987454-5ca4a7f1d5e4?auto=format&fit=crop&w=900&q=80', variant: 'visual-two' },
+        { title: 'Mobile care outreach', label: 'Healthcare', image: 'https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&w=900&q=80', variant: 'visual-three' },
+        { title: 'Hands working together', label: 'Community', image: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=1200&q=80', variant: 'visual-four' }
+      ];
+      container.innerHTML = '';
+      items.forEach((item, index) => {
+        const card = document.createElement('article');
+        const variant = item.variant || (index % 2 === 0 ? 'visual-one' : 'visual-two');
+        const tall = index === 0 ? 'tall' : '';
+        const wide = index === items.length - 1 && items.length % 2 === 0 ? 'wide' : '';
+        card.className = `gallery-card ${tall} ${wide}`.trim();
+        card.innerHTML = `
+          <div class="gallery-visual ${variant}" style="background-image: url('${item.image || ''}'); background-size: cover; background-position: center; color: transparent;">${item.label ? item.label.slice(0,1) : '❤'}</div>
+          <div class="gallery-copy">
+            <span>${item.label || 'Community'}</span>
+            <h3>${item.title || 'Impact Story'}</h3>
+          </div>`;
+        container.appendChild(card);
+      });
+    } catch (e) {
+      console.warn('gallery load failed', e);
+    }
+  }
 
   // helper: render projects
   async function fetchProjects() {
@@ -251,8 +284,11 @@ document.addEventListener('DOMContentLoaded', () => {
         (data.projects||[]).forEach(p => {
           const card = document.createElement('div');
           card.className = 'project-card';
+          const imageMarkup = p.image
+            ? `<div class="project-image project-image-photo" style="background-image:url('${p.image}'); background-size:cover; background-position:center;">${p.emoji || '🌍'}</div>`
+            : `<div class="project-image">${p.emoji||'🏳️'}</div>`;
           card.innerHTML = `
-            <div class="project-image">${p.emoji||'🏳️'}</div>
+            ${imageMarkup}
             <div class="project-body">
               <div class="project-tag">${p.tag||''}</div>
               <div class="project-title">${p.title}</div>

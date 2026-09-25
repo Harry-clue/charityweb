@@ -25,15 +25,47 @@ const dbFile = path.join(__dirname, 'db.json');
 const adapter = new JSONFile(dbFile);
 const db = new Low(adapter);
 
+const defaultProjects = [
+  { id: 1, title: 'Literacy for All', tag: 'Education', emoji: '📚', image: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=900&q=80', desc: 'Building libraries and schools' },
+  { id: 2, title: 'Wells of Hope', tag: 'Water', emoji: '💧', image: 'https://images.unsplash.com/photo-1522493987454-5ca4a7f1d5e4?auto=format&fit=crop&w=900&q=80', desc: 'Providing clean water access' },
+  { id: 3, title: 'Mobile Clinics', tag: 'Healthcare', emoji: '🏥', image: 'https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&w=900&q=80', desc: 'Mobile healthcare units' },
+  { id: 4, title: 'Women Lead', tag: 'Women', emoji: '👩', image: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=900&q=80', desc: 'Women empowerment programs' }
+];
+
+const defaultGallery = [
+  { id: 1, title: 'Books for brighter futures', label: 'Education', image: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=900&q=80', variant: 'visual-one' },
+  { id: 2, title: 'Clean water access', label: 'Water', image: 'https://images.unsplash.com/photo-1522493987454-5ca4a7f1d5e4?auto=format&fit=crop&w=900&q=80', variant: 'visual-two' },
+  { id: 3, title: 'Mobile care outreach', label: 'Healthcare', image: 'https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&w=900&q=80', variant: 'visual-three' },
+  { id: 4, title: 'Hands working together', label: 'Community', image: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=1200&q=80', variant: 'visual-four' }
+];
+
+function normalizeProjects(projects = []) {
+  const source = Array.isArray(projects) && projects.length ? projects : defaultProjects;
+  return source.map((project, index) => ({
+    id: Number(project.id ?? index + 1),
+    title: project.title || `Project ${index + 1}`,
+    tag: project.tag || 'Community',
+    desc: project.desc || '',
+    emoji: project.emoji || '🌍',
+    image: project.image || defaultProjects[index % defaultProjects.length].image
+  }));
+}
+
 async function initDb() {
   await db.read();
-  db.data ||= { donations: [], contacts: [], projects: [], events: [] };
+  db.data ||= { donations: [], contacts: [], projects: [], events: [], gallery: [] };
+  db.data.donations = Array.isArray(db.data.donations) ? db.data.donations : [];
+  db.data.contacts = Array.isArray(db.data.contacts) ? db.data.contacts : [];
+  db.data.events = Array.isArray(db.data.events) ? db.data.events : [];
+  db.data.projects = normalizeProjects(db.data.projects);
+  db.data.gallery = Array.isArray(db.data.gallery) && db.data.gallery.length ? db.data.gallery : defaultGallery;
   await db.write();
 }
 
 initDb();
 
 const app = express();
+const rootDir = path.join(__dirname, '..');
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -41,8 +73,12 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // rate limiting
 app.use(rateLimit({ windowMs: 60*1000, max: 100 }));
 
-// serve static front-end
-app.use(express.static(path.join(__dirname, '.')));
+// serve static front-end from the workspace root for both local and hosted setups
+app.use(express.static(rootDir));
+app.get('/', (req, res) => res.sendFile(path.join(rootDir, 'charity-website.html')));
+app.get('/charity-website.html', (req, res) => res.sendFile(path.join(rootDir, 'charity-website.html')));
+app.get('/admin', (req, res) => res.sendFile(path.join(rootDir, 'admin.html')));
+app.get('/admin.html', (req, res) => res.sendFile(path.join(rootDir, 'admin.html')));
 
 // expose a simple status endpoint for Stripe diagnostics (app is initialized at this point)
 app.get('/api/stripe-status', (req, res) => {
@@ -77,7 +113,7 @@ function sanitize(str) {
 
 // expose a simple config object to the frontend with publishable keys and csrf token
 // this should be before CSRF middleware since it serves the token
-app.get('/config', (req, res) => {
+function sendConfig(req, res) {
   let csrfToken = null;
   try {
     if (typeof req.csrfToken === 'function') csrfToken = req.csrfToken();
@@ -88,7 +124,9 @@ app.get('/config', (req, res) => {
     stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || null,
     csrfToken
   });
-});
+}
+app.get('/config', sendConfig);
+app.get('/api/config', sendConfig);
 
 // validation schemas
 const donationSchema = Joi.object({
@@ -108,7 +146,8 @@ const projectSchema = Joi.object({
   title: Joi.string().required(),
   tag: Joi.string().allow('', null),
   desc: Joi.string().allow('', null),
-  emoji: Joi.string().allow('', null)
+  emoji: Joi.string().allow('', null),
+  image: Joi.string().allow('', null)
 });
 
 const eventSchema = Joi.object({
@@ -116,6 +155,14 @@ const eventSchema = Joi.object({
   date: Joi.string().required(),
   title: Joi.string().required(),
   meta: Joi.string().allow('', null)
+});
+
+const gallerySchema = Joi.object({
+  id: Joi.number().required(),
+  title: Joi.string().required(),
+  label: Joi.string().allow('', null),
+  image: Joi.string().uri().required(),
+  variant: Joi.string().allow('', null)
 });
 
 // donation endpoint
@@ -218,6 +265,8 @@ app.get('/api/donations', async (req, res) => {
 app.get('/api/projects', async (req, res) => {
   try {
     await db.read();
+    db.data.projects = normalizeProjects(db.data.projects);
+    await db.write();
     res.json({ projects: db.data.projects || [] });
   } catch (err) {
     console.error(err);
@@ -237,7 +286,8 @@ app.post('/api/projects', async (req, res) => {
       title: sanitize(proj.title),
       tag: sanitize(proj.tag),
       desc: sanitize(proj.desc),
-      emoji: sanitize(proj.emoji)
+      emoji: sanitize(proj.emoji),
+      image: sanitize(proj.image)
     });
     await db.write();
     res.json({ success: true, project: proj });
@@ -260,7 +310,8 @@ app.put('/api/projects/:id', async (req, res) => {
       title: sanitize(update.title),
       tag: sanitize(update.tag),
       desc: sanitize(update.desc),
-      emoji: sanitize(update.emoji)
+      emoji: sanitize(update.emoji),
+      image: sanitize(update.image)
     });
     await db.write();
     res.json({ success: true, project: existing });
@@ -349,6 +400,86 @@ app.delete('/api/events/:id', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+// gallery API
+app.get('/api/gallery', async (req, res) => {
+  try {
+    await db.read();
+    if (!Array.isArray(db.data.gallery) || db.data.gallery.length === 0) {
+      db.data.gallery = [
+        { id: 1, title: 'Books for brighter futures', label: 'Education', image: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=900&q=80', variant: 'visual-one' },
+        { id: 2, title: 'Clean water access', label: 'Water', image: 'https://images.unsplash.com/photo-1522493987454-5ca4a7f1d5e4?auto=format&fit=crop&w=900&q=80', variant: 'visual-two' },
+        { id: 3, title: 'Mobile care outreach', label: 'Healthcare', image: 'https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&w=900&q=80', variant: 'visual-three' },
+        { id: 4, title: 'Hands working together', label: 'Community', image: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=1200&q=80', variant: 'visual-four' }
+      ];
+      await db.write();
+    }
+    res.json({ gallery: db.data.gallery });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/gallery', async (req, res) => {
+  try {
+    await db.read();
+    const item = req.body;
+    item.id = Date.now();
+    const { error } = gallerySchema.validate(item);
+    if (error) return res.status(400).json({ error: error.details[0].message });
+    db.data.gallery = db.data.gallery || [];
+    db.data.gallery.push({
+      id: item.id,
+      title: sanitize(item.title),
+      label: sanitize(item.label),
+      image: sanitize(item.image),
+      variant: sanitize(item.variant)
+    });
+    await db.write();
+    res.json({ success: true, gallery: db.data.gallery });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.put('/api/gallery/:id', async (req, res) => {
+  try {
+    await db.read();
+    const id = Number(req.params.id);
+    const existing = (db.data.gallery || []).find(item => item.id === id);
+    if (!existing) return res.status(404).json({ error: 'Not found' });
+    const update = Object.assign({}, existing, req.body, { id });
+    const { error } = gallerySchema.validate(update);
+    if (error) return res.status(400).json({ error: error.details[0].message });
+    Object.assign(existing, {
+      title: sanitize(update.title),
+      label: sanitize(update.label),
+      image: sanitize(update.image),
+      variant: sanitize(update.variant)
+    });
+    await db.write();
+    res.json({ success: true, gallery: existing });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.delete('/api/gallery/:id', async (req, res) => {
+  try {
+    await db.read();
+    const id = Number(req.params.id);
+    db.data.gallery = (db.data.gallery || []).filter(item => item.id !== id);
+    await db.write();
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 app.get('/api/stats', async (req, res) => {
   try {
     await db.read();

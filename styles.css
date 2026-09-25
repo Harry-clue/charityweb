@@ -190,6 +190,12 @@ section { padding: 6rem 5%; }
   height: 180px;
   display: flex; align-items: center; justify-content: center; font-size: 3rem;
   background: var(--light-bg);
+  background-size: cover;
+  background-position: center;
+}
+.project-image-photo {
+  color: rgba(255,255,255,0.0);
+  text-shadow: 0 0 0 rgba(0,0,0,0);
 }
 /* optional variant backgrounds (admin can assign p1-p6 class if desired) */
 .project-image.p1 { background: linear-gradient(135deg, #F2E0C8, #E8C89A); }
@@ -211,6 +217,53 @@ section { padding: 6rem 5%; }
 .progress-info { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 600; color: var(--brown); margin-bottom: 0.4rem; }
 .progress-bar { height: 6px; background: var(--light-bg); border-radius: 50px; overflow: hidden; }
 .progress-fill { height: 100%; border-radius: 50px; background: linear-gradient(to right, var(--rust), var(--gold)); }
+
+/* ===== GALLERY ===== */
+#gallery { background: var(--warm-white); }
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+.gallery-card {
+  border-radius: 22px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  box-shadow: 0 12px 30px rgba(26,18,8,0.05);
+}
+.gallery-card.tall { grid-row: span 2; }
+.gallery-card.wide { grid-column: span 2; }
+.gallery-visual {
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+  color: var(--deep);
+}
+.gallery-card.tall .gallery-visual { height: 420px; }
+.visual-one { background: linear-gradient(135deg, #f4d9b8, #e7b97c); }
+.visual-two { background: linear-gradient(135deg, #cfe7f9, #92bddf); }
+.visual-three { background: linear-gradient(135deg, #d8f0d2, #9ad7a3); }
+.visual-four { background: linear-gradient(135deg, #f5dbd0, #eaa78b); }
+.gallery-copy {
+  padding: 1.2rem 1.25rem 1.4rem;
+}
+.gallery-copy span {
+  display: inline-block;
+  color: var(--rust);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+.gallery-copy h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.25rem, 2vw, 1.8rem);
+  color: var(--deep);
+}
 
 /* ===== EVENTS ===== */
 #events { background: var(--deep); }
@@ -372,6 +425,9 @@ footer {
   .footer-grid { grid-template-columns: 1fr 1fr; }
   .event-card { grid-template-columns: auto 1fr; }
   .event-card .btn-event { display: none; }
+  .gallery-grid { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+  .gallery-card.tall { grid-row: span 1; }
+  .gallery-card.wide { grid-column: span 2; }
 }
 @media (max-width: 640px) {
   nav { padding: 1rem 4%; }
@@ -385,6 +441,9 @@ footer {
   .form-row { grid-template-columns: 1fr; }
   .donate-amounts { grid-template-columns: repeat(2, 1fr); }
   .event-card { grid-template-columns: auto 1fr; gap: 1rem; padding: 1rem 1.25rem; }
+  .gallery-grid { grid-template-columns: 1fr; }
+  .gallery-card.wide { grid-column: span 1; }
+  .gallery-card.tall .gallery-visual { height: 260px; }
 }
 
 /* ===== ADMIN DASHBOARD ===== */

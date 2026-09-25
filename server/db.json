@@ -22,8 +22,54 @@
       "title": "Test Project",
       "tag": "Test",
       "desc": "Description",
-      "emoji": ""
+      "emoji": "",
+      "image": "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=900&q=80"
+    },
+    {
+      "id": 1790323317170,
+      "title": "food",
+      "tag": "fhujkgvh",
+      "desc": "srdmhfjh",
+      "emoji": "4675",
+      "image": "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=900&q=80"
     }
   ],
-  "events": []
+  "events": [
+    {
+      "id": 1790323349762,
+      "date": "2006-12-23",
+      "title": ",usdu.iugkjvcy,",
+      "meta": "zja4su,dycjhv"
+    }
+  ],
+  "gallery": [
+    {
+      "id": 1,
+      "title": "Books for brighter futures",
+      "label": "Education",
+      "image": "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=900&q=80",
+      "variant": "visual-one"
+    },
+    {
+      "id": 2,
+      "title": "Clean water access",
+      "label": "Water",
+      "image": "https://images.unsplash.com/photo-1522493987454-5ca4a7f1d5e4?auto=format&fit=crop&w=900&q=80",
+      "variant": "visual-two"
+    },
+    {
+      "id": 3,
+      "title": "Mobile care outreach",
+      "label": "Healthcare",
+      "image": "https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&w=900&q=80",
+      "variant": "visual-three"
+    },
+    {
+      "id": 4,
+      "title": "Hands working together",
+      "label": "Community",
+      "image": "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=1200&q=80",
+      "variant": "visual-four"
+    }
+  ]
 }

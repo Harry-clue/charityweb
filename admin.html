@@ -43,7 +43,19 @@
             <input id="projFilter" placeholder="Title or tag..." style="max-width:320px;" />
           </div>
           <table id="projectsTable">
-            <thead><tr><th>Title</th><th>Tag</th><th>Emoji</th><th>Description</th><th></th></tr></thead>
+            <thead><tr><th>Title</th><th>Tag</th><th>Image</th><th>Emoji</th><th>Description</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="admin-section admin-tables" style="margin-top:0.8rem;">
+          <h2>Gallery</h2>
+          <div style="margin-bottom:0.5rem;">
+            <label style="font-weight:600;margin-right:0.5rem;">Search gallery:</label>
+            <input id="galleryFilter" placeholder="Title or label..." style="max-width:320px;" />
+          </div>
+          <table id="galleryTable">
+            <thead><tr><th>Title</th><th>Label</th><th>Image</th><th>Variant</th><th></th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -67,9 +79,19 @@
           <form id="projectForm" class="admin-forms">
             <input type="text" id="projTitle" placeholder="Title" required />
             <input type="text" id="projTag" placeholder="Tag" />
+            <input type="url" id="projImage" placeholder="Image URL" />
             <input type="text" id="projEmoji" placeholder="Emoji" />
             <input type="text" id="projDesc" placeholder="Description" />
             <button type="submit">Add Project</button>
+          </form>
+
+          <h3 style="margin-top:1rem;">New Gallery Photo</h3>
+          <form id="galleryForm" class="admin-forms">
+            <input type="text" id="galleryTitle" placeholder="Title" required />
+            <input type="text" id="galleryLabel" placeholder="Label" />
+            <input type="url" id="galleryImage" placeholder="Image URL" required />
+            <input type="text" id="galleryVariant" placeholder="Variant (visual-one, visual-two...)" />
+            <button type="submit">Add Photo</button>
           </form>
 
           <h3 style="margin-top:1rem;">New Event</h3>
@@ -127,6 +149,7 @@
         tr.innerHTML = `
           <td class="proj-title">${escapeHtml(p.title)}</td>
           <td class="proj-tag">${escapeHtml(p.tag||'')}</td>
+          <td class="proj-image"><a href="${escapeAttr(p.image||'')}" target="_blank" rel="noreferrer">${escapeHtml(p.image||'')}</a></td>
           <td class="proj-emoji">${escapeHtml(p.emoji||'')}</td>
           <td class="proj-desc">${escapeHtml(p.desc||'')}</td>
           <td class="admin-actions">
@@ -162,10 +185,12 @@
             const id = tr.dataset.id;
             const title = tr.querySelector('.proj-title').textContent;
             const tag = tr.querySelector('.proj-tag').textContent;
+            const image = tr.querySelector('.proj-image a')?.getAttribute('href') || '';
             const emoji = tr.querySelector('.proj-emoji').textContent;
             const desc = tr.querySelector('.proj-desc').textContent;
             tr.querySelector('.proj-title').innerHTML = `<input class="edit-title" value="${escapeAttr(title)}" />`;
             tr.querySelector('.proj-tag').innerHTML = `<input class="edit-tag" value="${escapeAttr(tag)}" />`;
+            tr.querySelector('.proj-image').innerHTML = `<input class="edit-image" value="${escapeAttr(image)}" />`;
             tr.querySelector('.proj-emoji').innerHTML = `<input class="edit-emoji" value="${escapeAttr(emoji)}" />`;
             tr.querySelector('.proj-desc').innerHTML = `<input class="edit-desc" value="${escapeAttr(desc)}" />`;
             e.target.textContent = 'Save';
@@ -180,6 +205,7 @@
               const updated = {
                 title: tr.querySelector('.edit-title').value,
                 tag: tr.querySelector('.edit-tag').value,
+                image: tr.querySelector('.edit-image').value,
                 emoji: tr.querySelector('.edit-emoji').value,
                 desc: tr.querySelector('.edit-desc').value
               };
@@ -206,6 +232,7 @@
         const proj={
           title:document.getElementById('projTitle').value,
           tag:document.getElementById('projTag').value,
+          image:document.getElementById('projImage').value,
           emoji:document.getElementById('projEmoji').value,
           desc:document.getElementById('projDesc').value
         };
@@ -215,6 +242,89 @@
       });
       document.getElementById('projFilter').addEventListener('input', e=> loadProjects(e.target.value));
       loadProjects();
+
+      // --- Gallery (list, inline edit, delete) ---
+      function createGalleryRow(item) {
+        const tr = document.createElement('tr');
+        tr.dataset.id = item.id;
+        tr.innerHTML = `
+          <td class="gallery-title">${escapeHtml(item.title)}</td>
+          <td class="gallery-label">${escapeHtml(item.label||'')}</td>
+          <td class="gallery-image"><a href="${escapeAttr(item.image||'')}" target="_blank" rel="noreferrer">${escapeHtml(item.image||'')}</a></td>
+          <td class="gallery-variant">${escapeHtml(item.variant||'')}</td>
+          <td class="admin-actions"><button class="edit-gallery">Edit</button> <button class="delete-gallery delete">Delete</button></td>`;
+        return tr;
+      }
+
+      async function loadGallery(filter) {
+        const resp = await fetch('/api/gallery');
+        const data = await resp.json();
+        const tbody = document.querySelector('#galleryTable tbody');
+        tbody.innerHTML = '';
+        let items = data.gallery || [];
+        if (filter) {
+          const f = filter.toLowerCase();
+          items = items.filter(i => (i.title || '').toLowerCase().includes(f) || (i.label || '').toLowerCase().includes(f));
+        }
+        items.forEach(item => tbody.appendChild(createGalleryRow(item)));
+        attachGalleryHandlers();
+      }
+
+      function attachGalleryHandlers() {
+        document.querySelectorAll('.edit-gallery').forEach(btn => {
+          btn.onclick = (e) => {
+            const tr = e.target.closest('tr');
+            const id = tr.dataset.id;
+            const title = tr.querySelector('.gallery-title').textContent;
+            const label = tr.querySelector('.gallery-label').textContent;
+            const image = tr.querySelector('.gallery-image a')?.getAttribute('href') || '';
+            const variant = tr.querySelector('.gallery-variant').textContent;
+            tr.querySelector('.gallery-title').innerHTML = `<input class="edit-gallery-title" value="${escapeAttr(title)}" />`;
+            tr.querySelector('.gallery-label').innerHTML = `<input class="edit-gallery-label" value="${escapeAttr(label)}" />`;
+            tr.querySelector('.gallery-image').innerHTML = `<input class="edit-gallery-image" value="${escapeAttr(image)}" />`;
+            tr.querySelector('.gallery-variant').innerHTML = `<input class="edit-gallery-variant" value="${escapeAttr(variant)}" />`;
+            e.target.textContent = 'Save';
+            const cancel = document.createElement('button'); cancel.textContent = 'Cancel'; cancel.className = 'cancel-edit'; e.target.after(cancel);
+            cancel.onclick = () => loadGallery(document.getElementById('galleryFilter').value);
+            e.target.onclick = async () => {
+              const updated = {
+                title: tr.querySelector('.edit-gallery-title').value,
+                label: tr.querySelector('.edit-gallery-label').value,
+                image: tr.querySelector('.edit-gallery-image').value,
+                variant: tr.querySelector('.edit-gallery-variant').value
+              };
+              await fetch('/api/gallery/' + id, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(updated) });
+              loadGallery(document.getElementById('galleryFilter').value);
+            };
+          };
+        });
+
+        document.querySelectorAll('.delete-gallery').forEach(btn => {
+          btn.onclick = (e) => {
+            const tr = e.target.closest('tr');
+            const id = tr.dataset.id;
+            showConfirm(`Delete gallery photo "${tr.querySelector('.gallery-title').textContent}"?`, async ()=>{
+              await fetch('/api/gallery/' + id, { method:'DELETE' });
+              loadGallery(document.getElementById('galleryFilter').value);
+            });
+          };
+        });
+      }
+
+      document.getElementById('galleryForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        const item = {
+          title: document.getElementById('galleryTitle').value,
+          label: document.getElementById('galleryLabel').value,
+          image: document.getElementById('galleryImage').value,
+          variant: document.getElementById('galleryVariant').value
+        };
+        await fetch('/api/gallery', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(item)});
+        e.target.reset();
+        loadGallery();
+      });
+      document.getElementById('galleryFilter').addEventListener('input', e => loadGallery(e.target.value));
+      loadGallery();
 
       // --- Events (list, edit, delete) ---
       function createEventRow(ev){
